@@ -42,8 +42,6 @@ services:
   api_test:
     image: gunstein/server_stellar_art_gallery:latest
     container_name: "server_stellar_art_gallery"
-    depends_on:
-      - "postgres"
     restart: always
     labels:
       - "traefik.enable=true"
