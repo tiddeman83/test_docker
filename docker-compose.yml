@@ -1,54 +1,53 @@
-version: '1'
+version: "3.8"
 
 services:
-  api:
-    build: ./flask
-    image: flask-api
-
-  client:
-    build: ./node
-    image: react-app
-    container_name: react-app
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  webserver:
-    image: nginx:alpine
-    container_name: nginx-webserver
-    restart: unless-stopped
+  traefik:
+    image: "traefik:v2.4"
+    container_name: "traefik"
+    command:
+      # - "--log.level=DEBUG"
+      # - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=tijmenbaas83@outlook.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      # redirect port 80 -> 443
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
     ports:
+      - "443:443"
       - "80:80"
+      # - "8080:8080"
     volumes:
-      - web-root:/var/www/html
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - certbot-etc:/etc/letsencrypt
-      - certbot-var:/var/lib/letsencrypt
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  frontend_test:
+    image: react-app
+    container_name: "react app"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend_test.rule=Host(`tester.tech-boss.nl`)"
+      - "traefik.http.routers.frontend_test.entrypoints=websecure"
+      - "traefik.http.routers.frontend_test.tls.certresolver=myresolver"
+      # use compression
+      - "traefik.http.routers.frontend_test.middlewares=test-compress"
+      - "traefik.http.middlewares.test-compress.compress=true"
+
+  api_test:
+    image: gunstein/server_stellar_art_gallery:latest
+    container_name: "server_stellar_art_gallery"
     depends_on:
-      - api
-      - client
-    networks:
-      - app-network
-
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - certbot-etc:/etc/letsencrypt
-      - certbot-var:/var/lib/letsencrypt
-      - web-root:/var/www/html
-    depends_on:
-      - webserver
-    command: certonly --webroot --webroot-path=/var/www/html --email tijmenbaas83@outlook.com --agree-tos --no-eff-email --staging -d dockertest.tech-boss.nl
-
-volumes:
-  certbot-etc:
-  certbot-var:
-  web-root:
-    driver: local
-
-networks:
-  app-network:
-    driver: bridge
-
-
+      - "postgres"
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api_test.rule=Host(`testerapi.tech-boss.nl`)"
+      - "traefik.http.routers.api_test.entrypoints=websecure"
+      - "traefik.http.routers.api_test.tls.certresolver=myresolver"
+    
