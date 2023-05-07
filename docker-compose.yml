@@ -1,0 +1,13 @@
+services:
+  api:
+    build: ./flask
+    image: flask-api
+
+  client:
+    build: ./node
+    image: react-app
+    ports: 
+      - "3000:80"
+
+
+
