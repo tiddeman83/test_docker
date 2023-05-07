@@ -1,3 +1,5 @@
+version: '1'
+
 services:
   api:
     build: ./flask
@@ -6,8 +8,51 @@ services:
   client:
     build: ./node
     image: react-app
-    ports: 
-      - "80:80"
+    container_name: react-app
+    restart: unless-stopped
+    networks:
+      - app-network
 
+  webserver:
+    image: nginx:alpine
+    container_name: nginx-webserver
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - web-root:/var/www/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    depends_on:
+      - api
+      - client
+    networks:
+      - app-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - web-root:/var/www/html
+    depends_on:
+      - webserver
+    command: certonly --webroot --webroot-path=/var/www/html --email tijmenbaas83@outlook.com --agree-tos --no-eff-email --staging -d dockertest.tech-boss.nl
+
+volumes:
+  certbot-etc:
+  certbot-var:
+  web-root:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/docker_project/test_docker/node/build
+
+networks:
+  app-network:
+    driver: bridge
 
 
