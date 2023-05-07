@@ -41,7 +41,7 @@ services:
       - "traefik.http.middlewares.test-compress.compress=true"
 
   api_test:
-    build: ./api
+    build: ./flask
     #image: flask-app
     container_name: "api"
     restart: always
