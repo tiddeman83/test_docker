@@ -14,6 +14,7 @@ services:
     depends_on:
       - flask
       - react
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
     networks:
       - webnet
 
@@ -47,8 +48,10 @@ services:
       - ./data/certbot/www:/var/www/certbot
     #command: certonly --webroot --webroot-path=/var/www/certbot --email tijmenbaas83@outlook.com --agree-tos --no-eff-email -d docktertest.tech-boss.nl
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    depends_on:
+      - nginx
     networks:
       - webnet
 
-  networks:
-    webnet:
+networks:
+  webnet:
